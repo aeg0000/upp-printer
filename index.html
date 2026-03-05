@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPP Label System V6 - RawBT Image</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f9; }
+        body { font-family: 'Tahoma', sans-serif; background: var(--bg); margin: 0; padding-bottom: 70px; }
+        
+        /* UI Components */
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; }
+        .tab-btn { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 11px; color: #7f8c8d; cursor: pointer; }
+        .tab-btn.active { color: var(--accent); border-top: 3px solid var(--accent); font-weight: bold; }
+        .content-section { display: none; padding: 15px; min-height: 100vh; box-sizing: border-box; }
+        .content-section.active { display: block; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        
+        /* Form Styling */
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 15px; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; }
+
+        /* Label Design (พื้นที่นี้จะถูกถ่ายรูปส่งไปพิมพ์) */
+        .preview-wrapper { display: flex; justify-content: center; overflow: hidden; padding: 10px 0; }
+        #mainPreview { 
+            background: white; border: 1px solid #000; width: 100mm; height: 100mm; 
+            padding: 5mm; box-sizing: border-box; display: flex; flex-direction: column;
+            color: black;
+        }
+        .preview-scale { transform: scale(0.7); transform-origin: top center; } /* ย่อเพื่อโชว์ในจอ แต่ตอนพิมพ์จะใช้ขนาดจริง */
+        
+        .lbl-header { font-size: 14pt; font-weight: bold; text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 10px; }
+        .lbl-row { display: flex; border-bottom: 0.5px solid #eee; padding: 4px 0; font-size: 11pt; }
+        .lbl-label { font-weight: bold; min-width: 32mm; }
+        .lbl-footer { display: grid; grid-template-columns: 1fr 1.2fr; border-top: 1px solid #000; padding-top: 8px; align-items: center; margin-top: auto; }
+        .lbl-bc { text-align: center; margin-top: 8px; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="section1" class="content-section active">
+    <h3>📝 1. ข้อมูลการผลิต</h3>
+    <div class="card">
+        <label>อัปโหลด Excel:</label><input type="file" id="excelFile" accept=".xlsx">
+        <label>ลูกค้า:</label><select id="custSelect" onchange="filterProducts()"><option value="">-- รอไฟล์ --</option></select>
+        <label>สินค้า:</label><select id="prodSelect" onchange="updateUI()"><option value="">-- เลือกลูกค้า --</option></select>
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1"><label>ช่าง:</label><input type="text" id="worker" placeholder="ระบุชื่อ" oninput="updateUI()"></div>
+            <div style="flex:1"><label>เครื่อง:</label><input type="text" id="machine" placeholder="เลขเครื่อง" oninput="updateUI()"></div>
+        </div>
+        <label>วันที่ผลิต:</label><input type="date" id="mfgDate" onchange="updateUI()">
+    </div>
+</div>
+
+<div id="section2" class="content-section">
+    <h3>🖨️ 2. สั่งพิมพ์ (RawBT)</h3>
+    <div class="card">
+        <label>หัวข้อบนลาเบล:</label><input type="text" id="headerText" value="บริษัท ยูพีพี อัลทิเมท แพคกิ้ง จำกัด" oninput="updateUI()">
+        <label>จำนวนใบที่ต้องการ:</label><input type="number" id="printQty" value="1" min="1">
+        <button class="btn btn-primary" onclick="printWithRawBT()">🖨️ พิมพ์ผ่าน RawBT (ภาษาไทย)</button>
+        <p style="font-size: 11px; color: #e74c3c; margin-top: 10px;">* ระบบจะส่งเป็นรูปภาพ เพื่อให้ภาษาไทยไม่เพี้ยน</p>
+    </div>
+</div>
+
+<div id="section3" class="content-section">
+    <h3>🖼️ 3. ตัวอย่างก่อนพิมพ์</h3>
+    <div class="preview-wrapper">
+        <div id="mainPreview" class="preview-scale">
+            <div class="lbl-header" id="ph">บริษัท ยูพีพี อัลทิเมท แพคกิ้ง จำกัด</div>
+            <div style="flex-grow:1">
+                <div class="lbl-row"><span class="lbl-label">CUSTOMER:</span><span id="p_cust">-</span></div>
+                <div class="lbl-row"><span class="lbl-label">PRODUCT:</span><span id="p_prod">-</span></div>
+                <div class="lbl-row"><span class="lbl-label">รหัสสินค้า:</span><span id="p_id">-</span></div>
+                <div class="lbl-row"><span class="lbl-label">Q.T.Y:</span><span id="p_qty">-</span></div>
+                <div class="lbl-row"><span class="lbl-label">ผลิต /MG:</span><span id="p_mfg">-</span></div>
+            </div>
+            <div class="lbl-footer">
+                <div style="font-size: 9pt;">
+                    <div><b>ช่าง:</b> <span id="p_wk">-</span></div>
+                    <div><b>เครื่อง:</b> <span id="p_mc">-</span></div>
+                </div>
+                <div style="display:flex; justify-content:center;"><div id="p_qr"></div></div>
+            </div>
+            <div class="lbl-bc"><svg id="p_barcode"></svg></div>
+        </div>
+    </div>
+</div>
+
+<div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab(1)">📝 ข้อมูล</button>
+    <button class="tab-btn" onclick="switchTab(2)">🖨️ พิมพ์</button>
+    <button class="tab-btn" onclick="switchTab(3)">🖼️ ตัวอย่าง</button>
+</div>
+
+<script>
+    let masterDB = [], selectedData = null;
+
+    function switchTab(n) {
+        document.querySelectorAll('.content-section, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('section'+n).classList.add('active');
+        document.querySelectorAll('.tab-btn')[n-1].classList.add('active');
+        if(n === 3) updateUI();
+    }
+
+    document.getElementById('excelFile').addEventListener('change', e => {
+        const r = new FileReader();
+        r.onload = ev => {
+            const wb = XLSX.read(new Uint8Array(ev.target.result), {type: 'array'});
+            masterDB = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {range: 1, defval: ""});
+            const s = document.getElementById('custSelect');
+            s.innerHTML = '<option value="">-- เลือกลูกค้า --</option>';
+            [...new Set(masterDB.map(i => i.CUTOMER))].filter(Boolean).sort().forEach(c => s.add(new Option(c, c)));
+        };
+        r.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    function filterProducts() {
+        const c = document.getElementById('custSelect').value;
+        const s = document.getElementById('prodSelect');
+        s.innerHTML = '<option value="">-- เลือกสินค้า --</option>';
+        masterDB.filter(i => i.CUTOMER === c).forEach(item => s.add(new Option(item['ชื่อสินค้า'], masterDB.indexOf(item))));
+    }
+
+    function updateUI() {
+        const idx = document.getElementById('prodSelect').value;
+        if(idx === "") return;
+        selectedData = masterDB[idx];
+        
+        document.getElementById('ph').innerText = document.getElementById('headerText').value;
+        document.getElementById('p_cust').innerText = selectedData['CUTOMER'] || "-";
+        document.getElementById('p_prod').innerText = selectedData['ชื่อสินค้า'] || "-";
+        document.getElementById('p_id').innerText = selectedData['รหัสสินค้า'] || "-";
+        document.getElementById('p_qty').innerText = (selectedData['Q.T.Y.'] || "0") + " " + (selectedData['หน่วย'] || "");
+        document.getElementById('p_wk').innerText = document.getElementById('worker').value || "-";
+        document.getElementById('p_mc').innerText = document.getElementById('machine').value || "-";
+        document.getElementById('p_mfg').innerText = document.getElementById('mfgDate').value || "-";
+
+        const val = String(selectedData['บาร์โค้ด'] || "000000");
+        document.getElementById('p_qr').innerHTML = "";
+        new QRCode(document.getElementById('p_qr'), { text: val, width: 70, height: 70 });
+        setTimeout(() => JsBarcode("#p_barcode", val, { format: "CODE128", width: 2.5, height: 40, displayValue: true }), 50);
+    }
+
+    async function printWithRawBT() {
+        if(!selectedData) return alert("กรุณาเลือกสินค้าก่อน");
+        
+        const previewEl = document.getElementById('mainPreview');
+        
+        // ลบคลาสย่อชั่วคราวเพื่อให้ภาพที่ถ่ายชัดเจนขนาด 100mm จริง
+        previewEl.classList.remove('preview-scale');
+        
+        try {
+            const canvas = await html2canvas(previewEl, {
+                scale: 1.5, // ความคมชัดสูง
+                useCORS: true,
+                backgroundColor: "#ffffff"
+            });
+            
+            // กลับมาใส่คลาสย่อเหมือนเดิมบนหน้าจอ
+            previewEl.classList.add('preview-scale');
+            
+            const imageData = canvas.toDataURL("image/png").split(',')[1];
+            const qty = document.getElementById('printQty').value;
+            
+            // ส่งไปแอป RawBT (ใช้คำสั่งพิมพ์รูปภาพ)
+            // RawBT รองรับการใส่จำนวน copy ในตัวแอป หรือวนลูปส่งไปก็ได้ครับ
+            for(let i=0; i < qty; i++){
+              window.location.href = "rawbt:base64," + imageData;
+              // หน่วงเวลานิดหน่อยเพื่อให้แอป RawBT รับข้อมูลทัน
+              await new Promise(r => setTimeout(r, 800));
+            }
+            
+        } catch (err) {
+            alert("เกิดข้อผิดพลาดในการสร้างรูปภาพ: " + err);
+            previewEl.classList.add('preview-scale');
+        }
+    }
+</script>
+</body>
+</html>
