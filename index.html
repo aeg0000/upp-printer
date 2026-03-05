@@ -174,7 +174,7 @@
             for(let i=0; i < qty; i++){
               window.location.href = "rawbt:base64," + imageData;
               // หน่วงเวลานิดหน่อยเพื่อให้แอป RawBT รับข้อมูลทัน
-              await new Promise(r => setTimeout(r, 800));
+              await new Promise(r => setTimeout(r, 2500));
             }
             
         } catch (err) {
@@ -184,4 +184,5 @@
     }
 </script>
 </body>
+
 </html>
