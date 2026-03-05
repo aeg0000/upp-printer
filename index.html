@@ -157,17 +157,21 @@
 
     const previewEl = document.getElementById('mainPreview');
 
+    // เอาการย่อออกก่อนจับภาพ
     previewEl.classList.remove('preview-scale');
 
     try{
 
+        // รอให้ barcode render ก่อน
+        await new Promise(r=>setTimeout(r,300));
+
         const canvas = await html2canvas(previewEl,{
-            scale:2,
+            scale:3,                // เพิ่มความคม
             backgroundColor:"#ffffff",
-            width:378,
-            height:378
+            useCORS:true
         });
 
+        // กลับสู่ preview mode
         previewEl.classList.add('preview-scale');
 
         const base64 = canvas.toDataURL("image/png").split(',')[1];
@@ -178,7 +182,8 @@
 
             window.location.href = "rawbt:base64," + base64;
 
-            await new Promise(r=>setTimeout(r,1000));
+            // เว้นเวลาให้ RawBT ทำงาน
+            await new Promise(r=>setTimeout(r,1500));
         }
 
     }catch(err){
@@ -187,8 +192,8 @@
         alert("สร้างภาพไม่สำเร็จ : "+err);
 
     }
-
 }
-
+</script>
+</body>
 </html>
 
