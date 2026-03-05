@@ -149,40 +149,46 @@
     }
 
     async function printWithRawBT() {
-        if(!selectedData) return alert("กรุณาเลือกสินค้าก่อน");
-        
-        const previewEl = document.getElementById('mainPreview');
-        
-        // ลบคลาสย่อชั่วคราวเพื่อให้ภาพที่ถ่ายชัดเจนขนาด 100mm จริง
-        previewEl.classList.remove('preview-scale');
-        
-        try {
-            const canvas = await html2canvas(previewEl, {
-                scale: 1.5, // ความคมชัดสูง
-                useCORS: true,
-                backgroundColor: "#ffffff"
-            });
-            
-            // กลับมาใส่คลาสย่อเหมือนเดิมบนหน้าจอ
-            previewEl.classList.add('preview-scale');
-            
-            const imageData = canvas.toDataURL("image/png").split(',')[1];
-            const qty = document.getElementById('printQty').value;
-            
-            // ส่งไปแอป RawBT (ใช้คำสั่งพิมพ์รูปภาพ)
-            // RawBT รองรับการใส่จำนวน copy ในตัวแอป หรือวนลูปส่งไปก็ได้ครับ
-            for(let i=0; i < qty; i++){
-              window.location.href = "rawbt:base64," + imageData;
-              // หน่วงเวลานิดหน่อยเพื่อให้แอป RawBT รับข้อมูลทัน
-              await new Promise(r => setTimeout(r, 2500));
-            }
-            
-        } catch (err) {
-            alert("เกิดข้อผิดพลาดในการสร้างรูปภาพ: " + err);
-            previewEl.classList.add('preview-scale');
-        }
+
+    if(!selectedData){
+        alert("กรุณาเลือกสินค้าก่อน");
+        return;
     }
-</script>
-</body>
+
+    const previewEl = document.getElementById('mainPreview');
+
+    previewEl.classList.remove('preview-scale');
+
+    try{
+
+        const canvas = await html2canvas(previewEl,{
+            scale:2,
+            backgroundColor:"#ffffff",
+            width:378,
+            height:378
+        });
+
+        previewEl.classList.add('preview-scale');
+
+        const base64 = canvas.toDataURL("image/png").split(',')[1];
+
+        const qty = parseInt(document.getElementById("printQty").value) || 1;
+
+        for(let i=0;i<qty;i++){
+
+            window.location.href = "rawbt:base64," + base64;
+
+            await new Promise(r=>setTimeout(r,1000));
+        }
+
+    }catch(err){
+
+        previewEl.classList.add('preview-scale');
+        alert("สร้างภาพไม่สำเร็จ : "+err);
+
+    }
+
+}
 
 </html>
+
