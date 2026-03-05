@@ -166,7 +166,7 @@
         await new Promise(r=>setTimeout(r,300));
 
         const canvas = await html2canvas(previewEl,{
-            scale:3,                // เพิ่มความคม
+            scale:1,                // เพิ่มความคม
             backgroundColor:"#ffffff",
             useCORS:true
         });
@@ -183,7 +183,7 @@
             window.location.href = "rawbt:base64," + base64;
 
             // เว้นเวลาให้ RawBT ทำงาน
-            await new Promise(r=>setTimeout(r,1500));
+            await new Promise(r=>setTimeout(r,5500));
         }
 
     }catch(err){
@@ -196,4 +196,5 @@
 </script>
 </body>
 </html>
+
 
